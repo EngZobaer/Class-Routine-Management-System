@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1068612952671",
+    "project_id": "darul-hidayah-class-routine",
+    "storage_bucket": "darul-hidayah-class-routine.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1068612952671:android:48f72d7371cfb40cad71ea",
+        "android_client_info": {
+          "package_name": "com.example.dcr_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAeCRAu5-wxdMO3eCYNtsN1PVD9KBy8n7Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1068612952671:android:3d7fce3d6094b458ad71ea",
+        "android_client_info": {
+          "package_name": "darulhidayah.classroutine"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAeCRAu5-wxdMO3eCYNtsN1PVD9KBy8n7Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
