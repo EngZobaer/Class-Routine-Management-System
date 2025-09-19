@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import '../Screens/login_screen.dart';
+import '../Left_Menu/Shift.dart';    // 🔹 Shift Page
+import '../Left_Menu/classes.dart'; // 🔹 Class Page
+import '../Left_Menu/Books.dart';   // 🔹 Books Page
+import '../Left_Menu/Teacher.dart'; // 🔹 Teacher Page
+import '../Left_Menu/assign_class_routing.dart'; // 🔹 Assign Class Routine Page
 
 class AdminDashboard extends StatefulWidget {
   @override
@@ -10,11 +15,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int _selectedIndex = 0;
 
   final List<Map<String, dynamic>> _menuItems = [
+    {"title": "Shift", "icon": Icons.settings_system_daydream},
     {"title": "Dashboard", "icon": Icons.dashboard},
     {"title": "Teachers", "icon": Icons.person},
-    {"title": "Students", "icon": Icons.group},
-    {"title": "Class Routine", "icon": Icons.schedule},
-    {"title": "Exams", "icon": Icons.assignment},
+    {"title": "Classes", "icon": Icons.class_},
+    {"title": "Assign Class Routine", "icon": Icons.schedule},
+    {"title": "Schedule", "icon": Icons.lock_clock},
+    {"title": "Books", "icon": Icons.menu_book},
     {"title": "Settings", "icon": Icons.settings},
   ];
 
@@ -24,7 +31,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final isMobile = size.width < 800;
 
     return Scaffold(
-      // ✅ Mobile Drawer with background color
+      backgroundColor: Colors.white,
       drawer: isMobile
           ? Drawer(
         child: Container(
@@ -39,17 +46,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
             Container(
               width: 220,
               color: Color(0xFF2E3191),
-              child: _buildSidebar(context), // ✅ Sidebar
+              child: _buildSidebar(context),
             ),
 
           // ✅ Main Area
           Expanded(
             child: Column(
               children: [
-                // Top Header
+                // 🔹 Header Section
                 Container(
                   height: 60,
-                  color: Colors.white,
+                  color: Colors.grey.shade200,
                   padding: EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -88,19 +95,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
                 // ✅ Body Content
                 Expanded(
-                  child: Center(
-                    child: Text(
-                      "Content for ${_menuItems[_selectedIndex]["title"]}",
-                      style:
-                      TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                    ),
-                  ),
+                  child: _getSelectedPage(),
                 ),
 
-                // ✅ Bottom Bar
+                // 🔹 Bottom Bar
                 Container(
                   height: 40,
-                  color: Colors.grey.shade200,
+                  color: Colors.white,
                   alignment: Alignment.center,
                   child: Text(
                     "© 2025 Darul Hidayah Admin Panel",
@@ -120,7 +121,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Sidebar Header
         Container(
           padding: EdgeInsets.all(16),
           child: Text(
@@ -134,7 +134,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ),
         Divider(color: Colors.white54),
 
-        // Sidebar Menu List
         Expanded(
           child: ListView.builder(
             itemCount: _menuItems.length,
@@ -152,16 +151,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   setState(() {
                     _selectedIndex = index;
                   });
-                  if (Navigator.canPop(context)) Navigator.pop(context); // ✅ Mobile Drawer close
+                  if (Navigator.canPop(context)) Navigator.pop(context);
                 },
               );
             },
           ),
         ),
-
         Divider(color: Colors.white54),
 
-        // ✅ Logout Button (Bottom)
         ListTile(
           leading: Icon(Icons.logout, color: Colors.white),
           title: Text(
@@ -177,5 +174,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ),
       ],
     );
+  }
+
+  // ✅ Body Content Switcher
+  Widget _getSelectedPage() {
+    switch (_selectedIndex) {
+      case 0:
+        return ShiftPage();
+      case 2:
+        return TeacherPage(); // 🔹 Teacher Page
+      case 3:
+        return ClassPage();
+      case 4:
+        return AssignClassRoutinePage(); // 🔹 Assign Class Routine
+      case 6:
+        return BooksPage();
+      default:
+        return Center(
+          child: Text(
+            "Content for ${_menuItems[_selectedIndex]["title"]}",
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+        );
+    }
   }
 }
