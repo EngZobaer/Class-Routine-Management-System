@@ -52,6 +52,38 @@ class DaysPage extends StatelessWidget {
     }
   }
 
+  /// 🔹 নতুন দিন যোগ করা
+  Future<void> _addDay(BuildContext context) async {
+    String newDayName = "";
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text("Add New Day"),
+        content: TextField(
+          decoration: InputDecoration(hintText: "Enter Day Name"),
+          onChanged: (val) => newDayName = val,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel")),
+          ElevatedButton(
+            onPressed: () async {
+              if (newDayName.trim().isEmpty) return;
+              final doc = await FirebaseFirestore.instance.collection("week").doc("week").get();
+              Map<String, dynamic> data = {};
+              if (doc.exists) data = doc.data()!;
+              // নতুন id হবে last key + 1
+              final nextId = (data.keys.map((e) => int.tryParse(e) ?? 0).fold<int>(0, (a, b) => a > b ? a : b) + 1).toString();
+              data[nextId] = newDayName;
+              await FirebaseFirestore.instance.collection("week").doc("week").set(data);
+              Navigator.pop(context);
+            },
+            child: Text("Save"),
+          )
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,7 +109,7 @@ class DaysPage extends StatelessWidget {
                   leading: CircleAvatar(child: Text("${index + 1}")),
                   title: Text(day["name"], style: const TextStyle(fontSize: 18)),
                   trailing: PopupMenuButton<String>(
-                    icon: Icon(Icons.add_box_sharp),
+                    icon: Icon(Icons.more_vert),
                     onSelected: (value) {
                       if (value == 'edit') {
                         _editDay(context, day["id"], day["name"]);
@@ -113,6 +145,12 @@ class DaysPage extends StatelessWidget {
             },
           );
         },
+      ),
+
+      /// 🔹 Add Floating Button
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _addDay(context),
+        child: Icon(Icons.add),
       ),
     );
   }

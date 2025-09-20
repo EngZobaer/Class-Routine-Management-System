@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/days_service.dart'; // ✅ নতুন service import
+import '../services/days_service.dart';
+import '../services/period_service.dart'; // ✅ PeriodService import
 
 class AssignClassRoutinePage extends StatefulWidget {
   @override
@@ -15,9 +16,14 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
   String? _selectedBookId, _selectedBookName;
   String? _selectedTeacherId, _selectedTeacherName;
   String? _selectedDay;
+  String? _selectedPeriod;
 
-  // ✅ Local cache
+  // ✅ Custom time support
+  String? _customStartTime;
+  String? _customEndTime;
+
   List<String> _days = [];
+  List<Map<String, String>> _availablePeriods = [];
 
   @override
   void initState() {
@@ -30,7 +36,24 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
     setState(() {});
   }
 
-  /// 🔹 Save or Update Routine
+  /// 🔹 Periods load (Shift + Day অনুযায়ী)
+  Future<void> _loadPeriods() async {
+    if (_selectedShiftId != null && _selectedDay != null) {
+      final periods = await PeriodService.getAvailablePeriods(
+        _selectedShiftId!,
+        _selectedDay!,
+      );
+      setState(() {
+        _availablePeriods = periods;
+      });
+    } else {
+      setState(() {
+        _availablePeriods = [];
+      });
+    }
+  }
+
+  /// 🔹 Save Routine
   Future<void> _saveRoutine(BuildContext context, {String? docId}) async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -38,20 +61,23 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
         _selectedClassId == null ||
         _selectedBookId == null ||
         _selectedTeacherId == null ||
-        _selectedDay == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("⚠️ All fields are required")));
+        _selectedDay == null ||
+        _selectedPeriod == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("⚠️ All fields are required")),
+      );
       return;
     }
 
-    final existing = await FirebaseFirestore.instance
-        .collection("class_routines")
-        .where("Class ID", isEqualTo: _selectedClassId)
-        .where("Shift ID", isEqualTo: _selectedShiftId)
-        .where("Day", isEqualTo: _selectedDay)
-        .get();
-
-    final period = existing.docs.length + 1;
+    // Period data resolve
+    final selectedPeriodData = _availablePeriods.firstWhere(
+          (p) => p["period"] == _selectedPeriod,
+      orElse: () => {
+        "period": _selectedPeriod!,
+        "start": _customStartTime ?? "-",
+        "end": _customEndTime ?? "-",
+      },
+    );
 
     final newId = docId ?? "CR${DateTime.now().millisecondsSinceEpoch}";
     await FirebaseFirestore.instance.collection("class_routines").doc(newId).set({
@@ -65,24 +91,28 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
       "Teacher ID": _selectedTeacherId,
       "Teacher Name": _selectedTeacherName,
       "Day": _selectedDay,
-      "Period": period.toString(),
+      "Period": selectedPeriodData["period"],
+      "StartTime": selectedPeriodData["start"],
+      "EndTime": selectedPeriodData["end"],
     });
 
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(docId == null
-            ? "✅ Routine Added Successfully"
-            : "✅ Routine Updated Successfully")));
+      content: Text(docId == null
+          ? "✅ Routine Added Successfully"
+          : "✅ Routine Updated Successfully"),
+    ));
   }
 
   /// 🔹 Delete Routine
   Future<void> _deleteRoutine(String id) async {
     await FirebaseFirestore.instance.collection("class_routines").doc(id).delete();
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text("🗑 Routine Deleted")));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("🗑 Routine Deleted")),
+    );
   }
 
-  /// 🔹 Show Popup Form (Add or Edit)
+  /// 🔹 Form Popup
   void _showRoutineFormPopup({Map<String, dynamic>? routineData, String? docId}) {
     if (routineData != null) {
       _selectedShiftId = routineData["Shift ID"];
@@ -94,6 +124,9 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
       _selectedTeacherId = routineData["Teacher ID"];
       _selectedTeacherName = routineData["Teacher Name"];
       _selectedDay = routineData["Day"];
+      _selectedPeriod = routineData["Period"];
+      _customStartTime = routineData["StartTime"];
+      _customEndTime = routineData["EndTime"];
     } else {
       _selectedShiftId = null;
       _selectedShiftName = null;
@@ -104,7 +137,12 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
       _selectedTeacherId = null;
       _selectedTeacherName = null;
       _selectedDay = null;
+      _selectedPeriod = null;
+      _customStartTime = null;
+      _customEndTime = null;
     }
+
+    _loadPeriods();
 
     showDialog(
       context: context,
@@ -112,8 +150,10 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          title: Text(docId == null ? "Add New Routine" : "Edit Routine",
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          title: Text(
+            docId == null ? "Add New Routine" : "Edit Routine",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           content: Form(
             key: _formKey,
             child: SingleChildScrollView(
@@ -122,28 +162,26 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
                   _buildDropdown("shifts", "Shift Name", (val, name) {
                     _selectedShiftId = val;
                     _selectedShiftName = name;
+                    _loadPeriods(); // reload periods
                   }, selectedValue: _selectedShiftId),
                   SizedBox(height: 10),
-
                   _buildDropdown("classes", "Class Name", (val, name) {
                     _selectedClassId = val;
                     _selectedClassName = name;
                   }, selectedValue: _selectedClassId),
                   SizedBox(height: 10),
-
                   _buildDropdown("books", "Book Name", (val, name) {
                     _selectedBookId = val;
                     _selectedBookName = name;
                   }, selectedValue: _selectedBookId),
                   SizedBox(height: 10),
-
                   _buildDropdown("teachers", "Name Ar", (val, name) {
                     _selectedTeacherId = val;
                     _selectedTeacherName = name;
                   }, selectedValue: _selectedTeacherId),
                   SizedBox(height: 10),
 
-                  /// 🔹 Firestore থেকে সপ্তাহের দিন Dropdown
+                  /// 🔹 Day select
                   DropdownButtonFormField<String>(
                     decoration: InputDecoration(
                       labelText: "Select Day",
@@ -154,8 +192,84 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
                     items: _days
                         .map((d) => DropdownMenuItem(value: d, child: Text(d)))
                         .toList(),
-                    onChanged: (val) => setState(() => _selectedDay = val),
+                    onChanged: (val) {
+                      setState(() => _selectedDay = val);
+                      _loadPeriods(); // reload on day change
+                    },
                   ),
+                  SizedBox(height: 10),
+
+                  /// 🔹 Period select
+                  DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      labelText: "Select Period",
+                      border: OutlineInputBorder(),
+                    ),
+                    value: _selectedPeriod,
+                    validator: (val) => val == null ? "Please select period" : null,
+                    items: [
+                      ..._availablePeriods.map(
+                            (p) => DropdownMenuItem(
+                          value: p["period"],
+                          child: Text(
+                              "Period ${p["period"]} (${p["start"]} - ${p["end"]})"),
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: "Custom",
+                        child: Text("Custom Period (Override)"),
+                      ),
+                    ],
+                    onChanged: (val) => setState(() => _selectedPeriod = val),
+                  ),
+
+                  /// 🔹 Custom Period picker
+                  if (_selectedPeriod == "Custom") ...[
+                    SizedBox(height: 10),
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay(hour: 9, minute: 0),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _customStartTime =
+                            "${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}";
+                          });
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: "Custom Start Time",
+                          border: OutlineInputBorder(),
+                        ),
+                        child: Text(_customStartTime ?? "Pick Time"),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay(hour: 10, minute: 0),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _customEndTime =
+                            "${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}";
+                          });
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: "Custom End Time",
+                          border: OutlineInputBorder(),
+                        ),
+                        child: Text(_customEndTime ?? "Pick Time"),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -175,7 +289,7 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
     );
   }
 
-  /// 🔹 Reusable Dropdown Builder
+  /// 🔹 Dropdown Builder
   Widget _buildDropdown(String collection, String field,
       Function(String?, String?) onChanged,
       {String? selectedValue}) {
@@ -240,7 +354,6 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
             ),
             SizedBox(height: 20),
             Divider(),
-
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -262,6 +375,7 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
                         DataColumn(label: Text("Subject")),
                         DataColumn(label: Text("Teacher")),
                         DataColumn(label: Text("Period")),
+                        DataColumn(label: Text("Time")),
                         DataColumn(label: Text("Actions")),
                       ],
                       rows: docs.map((doc) {
@@ -273,6 +387,8 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
                           DataCell(Text(data["Book Name"] ?? "")),
                           DataCell(Text(data["Teacher Name"] ?? "")),
                           DataCell(Text("Period ${data["Period"] ?? ""}")),
+                          DataCell(Text(
+                              "${data["StartTime"] ?? ""} - ${data["EndTime"] ?? ""}")),
                           DataCell(
                             PopupMenuButton<String>(
                               icon: Icon(Icons.more_vert, color: Colors.black),

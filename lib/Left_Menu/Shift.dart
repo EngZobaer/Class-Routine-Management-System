@@ -9,13 +9,15 @@ class ShiftPage extends StatefulWidget {
 class _ShiftPageState extends State<ShiftPage> {
   final _shiftNameController = TextEditingController();
   final _perClassTimeController = TextEditingController();
+  final _totalPeriodsController = TextEditingController();
   TimeOfDay? _selectedStartTime;
 
   Future<void> _addShift() async {
     final shiftName = _shiftNameController.text.trim();
     final perClassTime = int.tryParse(_perClassTimeController.text.trim()) ?? 0;
+    final totalPeriods = int.tryParse(_totalPeriodsController.text.trim()) ?? 0;
 
-    if (shiftName.isEmpty || _selectedStartTime == null || perClassTime <= 0) return;
+    if (shiftName.isEmpty || _selectedStartTime == null || perClassTime <= 0 || totalPeriods <= 0) return;
 
     final startFormatted =
         "${_selectedStartTime!.hour.toString().padLeft(2, "0")}:${_selectedStartTime!.minute.toString().padLeft(2, "0")}";
@@ -24,12 +26,14 @@ class _ShiftPageState extends State<ShiftPage> {
 
     await FirebaseFirestore.instance.collection("shifts").doc(newId).set({
       "Shift Name": shiftName,
-      "Class Start": startFormatted,
-      "Per Class Time": perClassTime,
+      "start_time": startFormatted,
+      "duration": perClassTime,
+      "total_periods": totalPeriods,
     });
 
     _shiftNameController.clear();
     _perClassTimeController.clear();
+    _totalPeriodsController.clear();
     _selectedStartTime = null;
 
     Navigator.pop(context);
@@ -39,12 +43,12 @@ class _ShiftPageState extends State<ShiftPage> {
     await FirebaseFirestore.instance.collection("shifts").doc(id).delete();
   }
 
-  Future<void> _editShift(String id, String shiftName, String classStart, int perClassTime) async {
+  Future<void> _editShift(String id, String shiftName, String startTime, int duration, int totalPeriods) async {
     _shiftNameController.text = shiftName;
-    _perClassTimeController.text = perClassTime.toString();
+    _perClassTimeController.text = duration.toString();
+    _totalPeriodsController.text = totalPeriods.toString();
 
-    // Parse saved start time
-    final parts = classStart.split(":");
+    final parts = startTime.split(":");
     _selectedStartTime = TimeOfDay(
       hour: int.tryParse(parts[0]) ?? 9,
       minute: int.tryParse(parts[1]) ?? 0,
@@ -102,26 +106,35 @@ class _ShiftPageState extends State<ShiftPage> {
                   ),
                   keyboardType: TextInputType.number,
                 ),
+                SizedBox(height: 10),
+
+                TextField(
+                  controller: _totalPeriodsController,
+                  decoration: InputDecoration(
+                    labelText: "Total Periods",
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
               ],
             ),
           ),
           actions: [
             TextButton(
               child: Text("Cancel", style: TextStyle(color: Colors.black)),
-              style: TextButton.styleFrom(backgroundColor: Colors.grey.shade200),
               onPressed: () => Navigator.pop(context),
             ),
             TextButton(
               child: Text("Update", style: TextStyle(color: Colors.black)),
-              style: TextButton.styleFrom(backgroundColor: Colors.grey.shade200),
               onPressed: () async {
                 final startFormatted =
                     "${_selectedStartTime!.hour.toString().padLeft(2, "0")}:${_selectedStartTime!.minute.toString().padLeft(2, "0")}";
 
                 await FirebaseFirestore.instance.collection("shifts").doc(id).update({
                   "Shift Name": _shiftNameController.text.trim(),
-                  "Class Start": startFormatted,
-                  "Per Class Time": int.tryParse(_perClassTimeController.text.trim()) ?? 0,
+                  "start_time": startFormatted,
+                  "duration": int.tryParse(_perClassTimeController.text.trim()) ?? 0,
+                  "total_periods": int.tryParse(_totalPeriodsController.text.trim()) ?? 0,
                 });
                 Navigator.pop(context);
               },
@@ -135,6 +148,7 @@ class _ShiftPageState extends State<ShiftPage> {
   void _showAddShiftDialog() {
     _shiftNameController.clear();
     _perClassTimeController.clear();
+    _totalPeriodsController.clear();
     _selectedStartTime = null;
 
     showDialog(
@@ -142,10 +156,7 @@ class _ShiftPageState extends State<ShiftPage> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          title: Text(
-            "Add New Shift",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+          title: Text("Add New Shift", style: TextStyle(fontWeight: FontWeight.bold)),
           content: SingleChildScrollView(
             child: Column(
               children: [
@@ -193,18 +204,26 @@ class _ShiftPageState extends State<ShiftPage> {
                   ),
                   keyboardType: TextInputType.number,
                 ),
+                SizedBox(height: 10),
+
+                TextField(
+                  controller: _totalPeriodsController,
+                  decoration: InputDecoration(
+                    labelText: "Total Periods",
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
               ],
             ),
           ),
           actions: [
             TextButton(
               child: Text("Cancel", style: TextStyle(color: Colors.black)),
-              style: TextButton.styleFrom(backgroundColor: Colors.grey.shade200),
               onPressed: () => Navigator.pop(context),
             ),
             TextButton(
               onPressed: _addShift,
-              style: TextButton.styleFrom(backgroundColor: Colors.grey.shade200),
               child: Text("Save", style: TextStyle(color: Colors.black)),
             ),
           ],
@@ -222,40 +241,27 @@ class _ShiftPageState extends State<ShiftPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Section
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Shift Management",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
+                Text("Shift Management", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                 TextButton.icon(
                   onPressed: _showAddShiftDialog,
                   icon: Icon(Icons.add, color: Colors.black),
                   label: Text("Add Shift", style: TextStyle(color: Colors.black)),
-                  style: TextButton.styleFrom(
-                    backgroundColor: Color(0xFFF7F2FA),
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  ),
                 ),
               ],
             ),
             SizedBox(height: 20),
             Divider(),
 
-            // Records Section
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance.collection("shifts").snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
-
                   final docs = snapshot.data!.docs;
-
-                  if (docs.isEmpty) {
-                    return Center(child: Text("No Shifts Found"));
-                  }
+                  if (docs.isEmpty) return Center(child: Text("No Shifts Found"));
 
                   return ListView.builder(
                     itemCount: docs.length,
@@ -263,24 +269,22 @@ class _ShiftPageState extends State<ShiftPage> {
                       final data = docs[index].data() as Map<String, dynamic>;
                       final id = docs[index].id;
                       final shiftName = data["Shift Name"] ?? "";
-                      final classStart = data["Class Start"] ?? "";
-                      final perClass = data["Per Class Time"] ?? "";
+                      final startTime = data["start_time"] ?? "";
+                      final duration = data["duration"] ?? 0;
+                      final totalPeriods = data["total_periods"] ?? 0;
 
                       return Card(
                         elevation: 2,
                         margin: EdgeInsets.symmetric(vertical: 6),
                         child: ListTile(
                           leading: Icon(Icons.access_time, color: Colors.blue),
-                          title: Text(
-                            shiftName,
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text("Start: $classStart | Per Class: $perClass mins"),
+                          title: Text(shiftName, style: TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text("Start: $startTime | Duration: $duration mins | Periods: $totalPeriods"),
                           trailing: PopupMenuButton<String>(
-                            icon: Icon(Icons.add_circle_outline, color: Colors.black),
+                            icon: Icon(Icons.more_vert, color: Colors.black),
                             onSelected: (value) {
                               if (value == 'edit') {
-                                _editShift(id, shiftName, classStart, int.tryParse(perClass.toString()) ?? 0);
+                                _editShift(id, shiftName, startTime, duration, totalPeriods);
                               } else if (value == 'delete') {
                                 _deleteShift(id);
                               }
@@ -289,21 +293,13 @@ class _ShiftPageState extends State<ShiftPage> {
                               PopupMenuItem(
                                 value: 'edit',
                                 child: Row(
-                                  children: [
-                                    Icon(Icons.edit, color: Colors.black),
-                                    SizedBox(width: 8),
-                                    Text("Edit"),
-                                  ],
+                                  children: [Icon(Icons.edit, color: Colors.black), SizedBox(width: 8), Text("Edit")],
                                 ),
                               ),
                               PopupMenuItem(
                                 value: 'delete',
                                 child: Row(
-                                  children: [
-                                    Icon(Icons.delete, color: Colors.red),
-                                    SizedBox(width: 8),
-                                    Text("Delete"),
-                                  ],
+                                  children: [Icon(Icons.delete, color: Colors.red), SizedBox(width: 8), Text("Delete")],
                                 ),
                               ),
                             ],
