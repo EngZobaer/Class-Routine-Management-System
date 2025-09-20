@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/days_service.dart'; // ✅ নতুন service import
 
 class AssignClassRoutinePage extends StatefulWidget {
   @override
@@ -15,14 +16,19 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
   String? _selectedTeacherId, _selectedTeacherName;
   String? _selectedDay;
 
-  final List<String> _days = [
-    "Saturday",
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday"
-  ];
+  // ✅ Local cache
+  List<String> _days = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDays();
+  }
+
+  Future<void> _loadDays() async {
+    _days = await DaysService.getDays();
+    setState(() {});
+  }
 
   /// 🔹 Save or Update Routine
   Future<void> _saveRoutine(BuildContext context, {String? docId}) async {
@@ -137,6 +143,7 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
                   }, selectedValue: _selectedTeacherId),
                   SizedBox(height: 10),
 
+                  /// 🔹 Firestore থেকে সপ্তাহের দিন Dropdown
                   DropdownButtonFormField<String>(
                     decoration: InputDecoration(
                       labelText: "Select Day",
@@ -168,7 +175,7 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
     );
   }
 
-  /// 🔹 Reusable Dropdown Builder (safe value check)
+  /// 🔹 Reusable Dropdown Builder
   Widget _buildDropdown(String collection, String field,
       Function(String?, String?) onChanged,
       {String? selectedValue}) {
@@ -234,10 +241,6 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
             SizedBox(height: 20),
             Divider(),
 
-            // Text("Routine Table",
-            //     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            // SizedBox(height: 10),
-
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -272,7 +275,7 @@ class _AssignClassRoutinePageState extends State<AssignClassRoutinePage> {
                           DataCell(Text("Period ${data["Period"] ?? ""}")),
                           DataCell(
                             PopupMenuButton<String>(
-                              icon: Icon(Icons.add, color: Colors.black),
+                              icon: Icon(Icons.more_vert, color: Colors.black),
                               onSelected: (value) {
                                 if (value == 'edit') {
                                   _showRoutineFormPopup(
