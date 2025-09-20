@@ -27,7 +27,7 @@ class _BooksPageState extends State<BooksPage> {
 
     await FirebaseFirestore.instance.collection("books").doc(newId).set({
       "Book Name Bn": bookBn,
-      "Book Name Eng": bookEng,
+      "Book Name": bookEng, // ✅ এখানে পরিবর্তন করা হলো
       "Class ID": _selectedClassId,
       "Class Name": _selectedClassName,
     });
@@ -195,7 +195,7 @@ class _BooksPageState extends State<BooksPage> {
                         if (!snapshot.hasData) return SizedBox();
 
                         final bookList = snapshot.data!.docs
-                            .map((doc) => doc["Book Name Eng"] ?? "")
+                            .map((doc) => doc["Book Name"] ?? "") // ✅ এখানে পরিবর্তন
                             .toSet()
                             .toList();
 
@@ -250,7 +250,10 @@ class _BooksPageState extends State<BooksPage> {
             // 🔹 Records Section
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection("books").orderBy("Book Name Eng").snapshots(),
+                stream: FirebaseFirestore.instance
+                    .collection("books")
+                    .orderBy("Book Name") // ✅ এখানে পরিবর্তন
+                    .snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
 
@@ -261,7 +264,7 @@ class _BooksPageState extends State<BooksPage> {
                     docs = docs.where((d) => d["Class Name"] == _filterClass).toList();
                   }
                   if (_filterBook != null) {
-                    docs = docs.where((d) => d["Book Name Eng"] == _filterBook).toList();
+                    docs = docs.where((d) => d["Book Name"] == _filterBook).toList(); // ✅ এখানে পরিবর্তন
                   }
 
                   if (docs.isEmpty) {
@@ -274,7 +277,7 @@ class _BooksPageState extends State<BooksPage> {
                       final data = docs[index].data() as Map<String, dynamic>;
                       final id = docs[index].id;
                       final bookBn = data["Book Name Bn"] ?? "";
-                      final bookEng = data["Book Name Eng"] ?? "";
+                      final bookEng = data["Book Name"] ?? ""; // ✅ এখানে পরিবর্তন
                       final className = data["Class Name"] ?? "";
 
                       return Card(

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../Left_Menu/Dashboard.dart';
+import '../Left_Menu/Days.dart';
+import '../Left_Menu/settings.dart';
 import '../Screens/login_screen.dart';
 import '../Left_Menu/Shift.dart';    // 🔹 Shift Page
 import '../Left_Menu/classes.dart'; // 🔹 Class Page
@@ -15,15 +18,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int _selectedIndex = 0;
 
   final List<Map<String, dynamic>> _menuItems = [
-    {"title": "Shift", "icon": Icons.settings_system_daydream},
     {"title": "Dashboard", "icon": Icons.dashboard},
+    {"title": "Shift", "icon": Icons.settings_system_daydream },
     {"title": "Teachers", "icon": Icons.person},
     {"title": "Classes", "icon": Icons.class_},
     {"title": "Assign Class Routine", "icon": Icons.schedule},
-    {"title": "Schedule", "icon": Icons.lock_clock},
+    {"title": "Days", "icon": Icons.calendar_today}, // ✅ নতুন যোগ
     {"title": "Books", "icon": Icons.menu_book},
     {"title": "Settings", "icon": Icons.settings},
   ];
+
 
   @override
   Widget build(BuildContext context) {
@@ -103,8 +107,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   height: 40,
                   color: Colors.white,
                   alignment: Alignment.center,
-                  child: Text(
-                    "© 2025 Darul Hidayah Admin Panel",
+                  child: Text("© ${DateTime.now().year} All Rights Reserved || Darul Hidayah" ,
                     style: TextStyle(color: Colors.black54),
                   ),
                 ),
@@ -180,15 +183,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _getSelectedPage() {
     switch (_selectedIndex) {
       case 0:
+        return TeacherRoutineDashboard();
+      case 1:
         return ShiftPage();
       case 2:
-        return TeacherPage(); // 🔹 Teacher Page
+        return TeacherPage();
       case 3:
         return ClassPage();
       case 4:
-        return AssignClassRoutinePage(); // 🔹 Assign Class Routine
+        return AssignClassRoutinePage();
+      case 5:
+        return DaysPage(); // ✅ নতুন Days Page
       case 6:
         return BooksPage();
+      case 7:
+        return SettingsPage();
       default:
         return Center(
           child: Text(
@@ -198,4 +207,5 @@ class _AdminDashboardState extends State<AdminDashboard> {
         );
     }
   }
+
 }
